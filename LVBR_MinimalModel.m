@@ -110,6 +110,16 @@ AMPA_window = 500;
 tau_rise_GABAa = 1;  tau_decay_GABAa = 6; 
 GABAa_window = 500;
 
+%----- 5-HT receptor parameter
+HT5_concentration = 10;               % nM
+%HT5_concentration = HT5_concentration * 8; % 10% more serotonin 
+%s_1a = 0.5;
+tau_1a = 30;                          % ms
+alpha_1a = 1.8;                       % kHz/uM
+%alpha_1a = alpha_1a*0.5;
+g_K1A = 29.7;                         % nS
+V_K = -70;                            % mV
+
 %----- input into ring
 
 % poisson process drive to soma
@@ -157,6 +167,7 @@ ve = zeros(n_e,sim_time); ue = zeros(n_e,sim_time);
 vi = zeros(n_i,sim_time); ui = zeros(n_i,sim_time);
 vth = zeros(n_th,sim_time); uth = zeros(n_th,sim_time);
 
+s_1a = zeros(sim_time);
 %----- Initialise synapse matrices
 
 g_syn_e_e_NMDA = zeros(n_e,sim_time);
@@ -199,10 +210,12 @@ for t = 1:(sim_time-1)
     Mg_gate = (1./(1 + Mg.*beta.*exp(-alpha*vd(:,t))));
     g_syn_tot = Mg_gate.*g_syn_th_d_NMDA(:,t) + g_syn_th_d_AMPA(:,t) + eps; % total condunctance
     E_tot = (Mg_gate.*g_syn_th_d_NMDA(:,t).*E_exc + g_syn_th_d_AMPA(:,t).*E_exc )./g_syn_tot; % total reverse potential
+    I_K1A = g_K1A*s_1a(t)*(vd(:,t) - V_K);
     % membrane potential
-    vd(:,t+1) = (vd(:,t) + (kd*(vd(:,t) - vd_r).*(vd(:,t) - vd_t) - ud(:,t) + 20*(ve(:,t) - vd(:,t)) + Baclofen + g_syn_tot.*E_tot)./Cd)...
+    vd(:,t+1) = (vd(:,t) + (kd*(vd(:,t) - vd_r).*(vd(:,t) - vd_t) - ud(:,t) + 20*(ve(:,t) - vd(:,t)) + I_K1A + Baclofen + g_syn_tot.*E_tot)./Cd)...
                 ./(1 + g_syn_tot./Cd);    
     fired=vd(:,t+1)>=vd_peak;
+    s_1a(t+1) = s_1a(t) - s_1a(t)/tau_1a + alpha_1a*HT5_concentration;
     if any(fired==1) 
        firings_d = [firings_d; t+0*find(fired==1), find(fired==1)]; 
        % interpolate spike time to find tau
