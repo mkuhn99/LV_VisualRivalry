@@ -523,9 +523,11 @@ dominance = sign(rateL - rateR);
 change_indices = find(diff(dominance) ~= 0);
 % Create an array of dominance durations
 dominance_durations = diff([0, change_indices, length(tstep)]);
+average_dominance_duration = mean(dominance_durations);
 
 figure(9);
-histogram(dominance_durations, 'BinWidth', max(dominance_durations)/15);
+histogram(dominance_durations, 'BinWidth', max(dominance_durations)/15, 'BinLimits', [0, max(dominance_durations)]);
 xlabel('Dominance Duration (ms)');
 ylabel('Frequency');
 title('Dominance Duration Histogram');
+legend(['Average: ' num2str(average_dominance_duration) ' ms']);
