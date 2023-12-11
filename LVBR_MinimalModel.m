@@ -517,6 +517,15 @@ ax = gca;
 ax.FontSize = 30; 
 set(gca, 'FontName', 'Times')
 
+% Determine dominance (1 for rateL > rateR, -1 for rateR > rateL, 0 for equal)
+dominance = sign(rateL - rateR);
+% Find the indices where dominance changes
+change_indices = find(diff(dominance) ~= 0);
+% Create an array of dominance durations
+dominance_durations = diff([0, change_indices, length(tstep)]);
 
-
-
+figure(9);
+histogram(dominance_durations, 'BinWidth', max(dominance_durations)/15);
+xlabel('Dominance Duration (ms)');
+ylabel('Frequency');
+title('Dominance Duration Histogram');
