@@ -112,18 +112,18 @@ GABAa_window = 500;
 
 %----- 5-HT receptor parameter
 HT5_concentration = 10;                 % nM
-%HT5_concentration = HT5_concentration * 8; % 10% more serotonin 
+% HT5_concentration = HT5_concentration * 8; % 10% more serotonin 
 %s_1a = 0.5;
 tau_1a = 30;                            % ms
-alpha_1a = 1.800;                         % kHz/uM
-%alpha_1a = alpha_1a*0.5;
+alpha_1a = 1.8;                         % kHz/uM
+alpha_1a = alpha_1a*0.5;
 g_K1A = 29.7;                           % nS
 V_K = -70;                              % mV
 
 tau_2a = 120;                           %ms
-alpha_2a_e = 2.250;                      %kHz/uM
-alpha_2a_i = 11.000;                        %kHz/uM
-
+alpha_2a_e = 2.25;                      %kHz/uM
+alpha_2a_i = 11;                        %kHz/uM
+alpha_2a_e = alpha_2a_e*0.5;
 gamma = 0.00041;                        %uM/ms
 alpha_ca = 0.1;                         %uM
 tau_ca = 240;                           %ms
@@ -136,6 +136,7 @@ beta_Can = 0.002;                       %ms^-1
 alpha_h = 3;                            %uM
 beta_h = 5;                             %uM
 
+g_L = 26;                               %nS
 %----- input into ring
 
 % poisson process drive to soma
@@ -186,6 +187,7 @@ vth = zeros(n_th,sim_time); uth = zeros(n_th,sim_time);
 % state variable matrices for receptors
 s_1a = zeros(sim_time,1);
 s_2a = zeros(sim_time,1);
+s_2a_I = zeros(sim_time,1);
 
 ca = zeros(n_e, sim_time);
 m_ca = zeros(n_e, sim_time) + 0.1;
@@ -209,8 +211,6 @@ ve(:,1) = ve_r;
 vi(:,1) = vi_r;
 vth(:,1) = vth_r;
 
-s_2a(1) = 0.5;
-s_1a(1) = 0.5;
 %----- initialise spike storage containers
 
 firings_d = []; 
@@ -219,7 +219,7 @@ firings_i = []; tf_i = zeros(n_i,1);
 firings_th = []; tf_th = zeros(n_th,1); 
 
 %% Simulation loop
-fired = zeros(1,n_e);
+%fired = zeros(1,n_e);
 disp('Simulation start'); tic
 for t = 1:(sim_time-1)
     
@@ -329,8 +329,11 @@ for t = 1:(sim_time-1)
     Mg_gate = (1./(1 + Mg.*beta.*exp(-alpha*vi(:,t))));
     g_syn_tot = Mg_gate.*g_syn_e_i_NMDA(:,t) + g_syn_e_i_AMPA(:,t) + eps; % total condunctance
     E_tot = (Mg_gate.*g_syn_e_i_NMDA(:,t).*E_exc + g_syn_e_i_AMPA(:,t).*E_exc)./g_syn_tot; % total reverse potential
+    % 5-HT modulated leak conductance
+    s_2a_I(t+1) = s_2a_I(t) - s_2a_I(t)./tau_2a + alpha_2a_i.*HT5_concentration.*(1 - s_2a_I(t)./1000);
+    I_L = g_L*(1 - s_2a_I(t)./1000).*(vi(:,t) - V_K);
     % membrane potential
-    vi(:,t+1) = (vi(:,t) + (ki.*(vi(:,t) - vi_r).*(vi(:,t) - vi_t) - ui(:,t) + g_syn_tot.*E_tot)./Ci)...
+    vi(:,t+1) = (vi(:,t) + (ki.*(vi(:,t) - vi_r).*(vi(:,t) - vi_t) - ui(:,t) - I_L + g_syn_tot.*E_tot)./Ci)...
                 ./(1 + (g_syn_tot./Ci));
     % find spikes
     fired=vi(:,t+1)>=vi_peak;
@@ -422,29 +425,29 @@ time = linspace(1,sim_time/1000,sim_time); % time in seconds
 neuronidx = NL;
 thalidx = round(neuronidx/9);
 
-figure(1)
-hold on
-plot(time,ve(neuronidx,:),'k')
-ylabel('Neuron index')
-ylabel('Time (s)')
-ax = gca;
-ax.FontSize = 30; 
-set(gca, 'FontName', 'Times')
-title('L5 Soma')
+% figure(1)
+% hold on
+% plot(time,ve(neuronidx,:),'k')
+% ylabel('Neuron index')
+% ylabel('Time (s)')
+% ax = gca;
+% ax.FontSize = 30; 
+% set(gca, 'FontName', 'Times')
+% title('L5 Soma')
 
-figure(2)
-plot(time,vi(neuronidx,:),'k') 
-ax = gca;
-ax.FontSize = 30; 
-set(gca, 'FontName', 'Times')
-title('Basket Cell')
-
-figure(3)
-plot(time,vth(thalidx,:),'k')
-ax = gca;
-ax.FontSize = 30; 
-set(gca, 'FontName', 'Times')
-title('Thalamus')
+% figure(2)
+% plot(time,vi(neuronidx,:),'k') 
+% ax = gca;
+% ax.FontSize = 30; 
+% set(gca, 'FontName', 'Times')
+% title('Basket Cell')
+% 
+% figure(3)
+% plot(time,vth(thalidx,:),'k')
+% ax = gca;
+% ax.FontSize = 30; 
+% set(gca, 'FontName', 'Times')
+% title('Thalamus')
 
 figure(4)
 hold on
